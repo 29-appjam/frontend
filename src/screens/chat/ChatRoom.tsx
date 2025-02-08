@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Dimensions, TouchableOpacity } from 'react-native';
-import { Mic } from 'lucide-react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, Dimensions, TouchableOpacity, Alert } from 'react-native';
+import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
+import { Bot } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
-import { BotIcon } from 'assets/icons';
 import MicIcon from 'assets/icons/MicIcon';
 
 const { width } = Dimensions.get('window');
@@ -24,9 +25,140 @@ const ChatRoom = () => {
   ];
 
   const [questions, setQuestions] = useState(defaultQuestions);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recording, setRecording] = useState(null);
+
+  useEffect(() => {
+    return () => {
+      if (recording) {
+        recording.stopAndUnloadAsync();
+      }
+    };
+  }, []);
+
+  const startRecording = async () => {
+    try {
+      console.log('Requesting permissions..');
+      const { granted } = await Audio.requestPermissionsAsync();
+      
+      if (!granted) {
+        Alert.alert('권한 오류', '마이크 권한이 필요합니다.');
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+        playThroughEarpieceAndroid: true,
+        staysActiveInBackground: true,
+      });
+
+      console.log('Starting recording..');
+      const { recording } = await Audio.Recording.createAsync({
+        android: {
+          extension: '.wav',
+          outputFormat: Audio.RECORDING_OPTION_ANDROID_OUTPUT_FORMAT_DEFAULT,
+          audioEncoder: Audio.RECORDING_OPTION_ANDROID_AUDIO_ENCODER_DEFAULT,
+          sampleRate: 44100,
+          numberOfChannels: 1,
+          bitRate: 128000,
+        },
+        ios: {
+          extension: '.wav',
+          audioQuality: Audio.RECORDING_OPTION_IOS_AUDIO_QUALITY_HIGH,
+          sampleRate: 44100,
+          numberOfChannels: 1,
+          bitRate: 128000,
+          linearPCMBitDepth: 16,
+          linearPCMIsBigEndian: false,
+          linearPCMIsFloat: false,
+        },
+      });
+
+      setRecording(recording);
+      setIsRecording(true);
+      console.log('Recording started');
+    } catch (err) {
+      console.error('Failed to start recording', err);
+      Alert.alert('녹음 오류', '녹음을 시작할 수 없습니다.');
+    }
+  };
+
+  const stopRecording = async () => {
+    try {
+      if (!recording) {
+        return;
+      }
+
+      console.log('Stopping recording..');
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      console.log('Recording stopped and stored at', uri);
+      
+      setRecording(null);
+      setIsRecording(false);
+
+      // 오디오 파일을 base64로 변환
+      const base64Audio = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // Google Cloud Speech-to-Text API 호출
+      try {
+        const response = await fetch('YOUR_GOOGLE_CLOUD_FUNCTION_URL', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            audio: {
+              content: base64Audio
+            },
+            config: {
+              encoding: 'LINEAR16',
+              sampleRateHertz: 44100,
+              languageCode: 'ko-KR',
+              model: 'default',
+              audioChannelCount: 1,
+            }
+          }),
+        });
+
+        const result = await response.json();
+        
+        if (result.transcript) {
+          setQuestions(prev => [...prev, result.transcript]);
+        } else {
+          Alert.alert('인식 오류', '음성을 텍스트로 변환하지 못했습니다. 다시 시도해주세요.');
+        }
+      } catch (speechError) {
+        console.error('Speech recognition failed:', speechError);
+        Alert.alert('변환 오류', '음성 인식에 실패했습니다. 다시 시도해주세요.');
+      }
+
+      // 임시 파일 삭제
+      try {
+        await FileSystem.deleteAsync(uri);
+      } catch (deleteError) {
+        console.error('Failed to delete temporary file:', deleteError);
+      }
+
+    } catch (err) {
+      console.error('Failed to stop recording', err);
+      Alert.alert('오류', '음성 처리 중 오류가 발생했습니다.');
+    }
+  };
 
   const resetQuestions = () => {
     setQuestions(defaultQuestions);
+  };
+
+  const handleMicPress = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
   };
 
   return (
@@ -41,7 +173,7 @@ const ChatRoom = () => {
         <View style={styles.chatContent}>
           <View style={styles.botContainer}>
             <View style={styles.botIconWrapper}>
-              <BotIcon color="#4A7DFF" size={10} />
+              <Bot size={20} color="#6A8EF0" />
               <Text style={styles.botName}>스피킷</Text>
             </View>
           </View>
@@ -49,11 +181,14 @@ const ChatRoom = () => {
             <View style={styles.backgroundContainer}>
               <BackgroundSvg />
             </View>
-            <View style={styles.micContainer}>
-              <View style={styles.micCircle}>
-                <MicIcon size={72}/>
+            <TouchableOpacity 
+              style={[styles.micContainer, isRecording && styles.micContainerRecording]}
+              onPress={handleMicPress}
+            >
+              <View style={[styles.micCircle, isRecording && styles.micCircleRecording]}>
+                <MicIcon size={72} color={isRecording ? "#FF4A4A" : "#000000"}/>
               </View>
-            </View>
+            </TouchableOpacity>
             <View style={styles.questionsContainer}>
               {questions.map((question, index) => (
                 <View key={index} style={styles.questionBubble}>
@@ -105,7 +240,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     lineHeight: 21,
     letterSpacing: -0.32,
-},
+  },
   chatContent: {
     flex: 1,
     paddingHorizontal: 19,
@@ -134,13 +269,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    marginLeft: 4, 
     marginTop: -15,
   },
   botName: {
     fontSize: 14,
     color: '#000000',
-    marginLeft: 8, 
+    marginLeft: 4, 
   },
   chatBubble: {
     flex: 1,
@@ -160,6 +294,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: 32,
   },
+  micContainerRecording: {
+    opacity: 0.8,
+  },
   micCircle: {
     width: 100,
     height: 100,
@@ -168,6 +305,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  micCircleRecording: {
+    backgroundColor: '#FFE5E5',
   },
   questionsContainer: {
     marginTop: 40,
