@@ -17,8 +17,8 @@ import { useNavigation } from '@react-navigation/native';
 import { NavigationProps } from '@/navigation/types';
 import Button from '@/components/common/Button';
 import { Ionicons } from '@expo/vector-icons';
-import { UserIcon } from '@/components/icons';
-import LockIcon from '@/components/icons/LockIcon';
+import { UserIcon } from 'assets/icons';
+import LockIcon from '../../../assets/icons/LockIcon';
 
 const { height } = Dimensions.get('window');
 
@@ -58,9 +58,8 @@ const FirstView = () => {
   };
 
   const handleLogin = () => {
-    // 로그인 처리 후
-    navigation.navigate('MainTabs');  // chat 스크린으로 이동
-    hideModal();  // 모달 닫기
+    navigation.navigate('MainTabs');
+    hideModal(); 
   };
 
   const renderBirthdayInput = () => {
