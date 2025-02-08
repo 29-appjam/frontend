@@ -5,6 +5,7 @@ import * as FileSystem from 'expo-file-system';
 import { Bot, Play, Pause, X } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
 import MicIcon from 'assets/icons/MicIcon';
+import axios from 'axios';
 
 const { width } = Dimensions.get('window');
 
@@ -166,13 +167,11 @@ const AudioMessage = ({ audioUri, onDelete, index }) => {
 };
 
 const ChatRoom = () => {
-  const defaultQuestions = [
+  const [questions, setQuestions] = useState([
     "미래산업에 대한 준비는 어떻게 해야 할까요?",
     "이런 기술들이 우리 삶을 개선한다고 했는데, 구체적인 예시를 들 수 있나요?",
     "미래산업에서 일자리를 찾기 위한 준비 방법은 무엇인가요?"
-  ];
-
-  const [questions, setQuestions] = useState(defaultQuestions);
+  ]);
   const [isRecording, setIsRecording] = useState(false);
   const [recording, setRecording] = useState(null);
   const [audioMessages, setAudioMessages] = useState([]);
@@ -225,9 +224,28 @@ const ChatRoom = () => {
       const uri = recording.getURI();
       console.log('Recording stopped and stored at', uri);
 
-      const newAudioMessage = { id: Date.now(), uri };
-      setAudioMessages(prev => [...prev, newAudioMessage]);
+      // 서버로 음성 보내기
+      const formData = new FormData();
+      formData.append('audioFile', {
+        uri: uri,
+        type: 'audio/mpeg', // 파일 형식에 맞게 수정 필요
+        name: 'audio.mp3',
+      });
 
+      const response = await axios.post('http://172.16.1.110:8080/transcribe', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      // 예상 질문 처리
+      if (response.status === 200) {
+        setQuestions(response.data);
+      } else {
+        Alert.alert('오류', '예상 질문을 받을 수 없습니다.');
+      }
+
+      setAudioMessages(prev => [...prev, { id: Date.now(), uri }]);
       setRecording(null);
     } catch (err) {
       console.error('Failed to stop recording', err);
@@ -249,11 +267,6 @@ const ChatRoom = () => {
     setAudioMessages(prev => prev.filter(msg => msg.id !== id));
   };
 
-  const resetQuestions = () => {
-    setQuestions(defaultQuestions);
-    setAudioMessages([]);
-  };
-
   const handleMicPress = async () => {
     if (isRecording) {
       await stopRecording();
@@ -267,9 +280,6 @@ const ChatRoom = () => {
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>예상 질문</Text>
-          <TouchableOpacity onPress={resetQuestions}>
-            <Text style={styles.headerButton}>초기화</Text>
-          </TouchableOpacity>
         </View>
         <View style={styles.chatContent}>
           <View style={styles.botContainer}>
@@ -289,7 +299,7 @@ const ChatRoom = () => {
                 onPress={handleMicPress}
               >
                 <View style={[styles.micCircle, isRecording && styles.micCircleRecording]}>
-                  <MicIcon size={72} color={isRecording ? "#FF4A4A" : "#000000"}/>
+                  <MicIcon size={72} color={isRecording ? "#FF4A4A" : "#000000"} />
                 </View>
               </TouchableOpacity>
             </View>
@@ -332,26 +342,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   headerTitle: {
-    flex: 1, 
+    flex: 1,
     color: '#000',
     textAlign: 'center',
     fontFamily: 'Pretendard',
     fontSize: 16,
-    fontStyle: 'normal',
-    fontWeight: '600',
-    lineHeight: 21, 
-    marginLeft: 30,
-    letterSpacing: -0.32,
-  },
-  headerButton: {
-    color: '#6A8EF0', 
-    textAlign: 'center',
-    fontFamily: 'Pretendard',
-    fontSize: 16,
-    fontStyle: 'normal',
     fontWeight: '600',
     lineHeight: 21,
-    letterSpacing: -0.32,
   },
   chatContent: {
     flex: 1,
@@ -367,10 +364,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
     elevation: 5,
@@ -386,7 +380,7 @@ const styles = StyleSheet.create({
   botName: {
     fontSize: 14,
     color: '#000000',
-    marginLeft: 4, 
+    marginLeft: 4,
   },
   chatBubble: {
     flex: 1,
@@ -394,7 +388,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 20,
     marginBottom: 16,
-    marginHorizontal: 0,
   },
   backgroundContainer: {
     position: 'absolute',
@@ -439,19 +432,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 3,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
   micCircleRecording: {
     backgroundColor: '#FFE5E5',
-  },
-  questionsContainer: {
-    flex: 1,
-    gap: 12,
   },
   questionBubble: {
     backgroundColor: '#FFFFFF',
