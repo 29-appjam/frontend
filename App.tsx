@@ -6,6 +6,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { RootStackParamList, TabParamList } from './src/types/navigation';
 import FirstView from './src/screens/onboarding/FirstView';
 import ChatRoom from './src/screens/chat/ChatRoom';
+import script from './src/screens/script/script';
+import relieve from './src/screens/relieve/relieve';
 import { HomeIcon, MessageIcon, HeartIcon } from './assets/icons';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -26,8 +28,8 @@ const TabNavigator: React.FC = () => {
         }}
       >
         <Tab.Screen
-          name="Home"
-          component={HomeScreen}
+          name="script"
+          component={script}
           options={{
             tabBarLabel: '대본',
             tabBarIcon: ({ color, size }) => <HomeIcon color={color} size={size} />,
@@ -42,8 +44,8 @@ const TabNavigator: React.FC = () => {
           }}
         />
         <Tab.Screen
-          name="Anxiety"
-          component={AnxietyScreen}
+          name="relieve"
+          component={relieve}
           options={{
             tabBarLabel: '긴장감 완화',
             tabBarIcon: ({ color, size }) => <HeartIcon color={color} size={size} />,
