@@ -62,36 +62,27 @@ const FirstView = () => {
       <View style={{ marginTop: 40 }}>
         <Text style={styles.inputLabel}>생년월일</Text>
         <View style={styles.birthdayContainer}>
-          <View style={styles.birthdayInput}>
-            <TextInput
-              style={styles.birthdayText}
-              placeholder="YYYY"
-              placeholderTextColor="#A7A7A7"
-              keyboardType="numeric"
-              maxLength={4}
-            />
-            <Ionicons name="chevron-down" size={16} color="#A7A7A7" />
-          </View>
-          <View style={styles.birthdayInput}>
-            <TextInput
-              style={styles.birthdayText}
-              placeholder="MM"
-              placeholderTextColor="#A7A7A7"
-              keyboardType="numeric"
-              maxLength={2}
-            />
-            <Ionicons name="chevron-down" size={16} color="#A7A7A7" />
-          </View>
-          <View style={styles.birthdayInput}>
-            <TextInput
-              style={styles.birthdayText}
-              placeholder="DD"
-              placeholderTextColor="#A7A7A7"
-              keyboardType="numeric"
-              maxLength={2}
-            />
-            <Ionicons name="chevron-down" size={16} color="#A7A7A7" />
-          </View>
+          <TextInput
+            style={styles.birthdayInput}
+            placeholder="YYYY"
+            placeholderTextColor="#999"
+            keyboardType="numeric"
+            maxLength={4}
+          />
+          <TextInput
+            style={styles.birthdayInput}
+            placeholder="MM"
+            placeholderTextColor="#999"
+            keyboardType="numeric"
+            maxLength={2}
+          />
+          <TextInput
+            style={styles.birthdayInput}
+            placeholder="DD"
+            placeholderTextColor="#999"
+            keyboardType="numeric"
+            maxLength={2}
+          />
         </View>
       </View>
     );
