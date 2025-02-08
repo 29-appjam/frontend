@@ -1,47 +1,66 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, StatusBar } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, Dimensions, TouchableOpacity } from 'react-native';
 import { Mic } from 'lucide-react-native';
+import Svg, { Path } from 'react-native-svg';
+import { BotIcon } from 'assets/icons';
+import MicIcon from 'assets/icons/MicIcon';
+
+const { width } = Dimensions.get('window');
+
+const BackgroundSvg = () => (
+  <Svg width={width} height={176} viewBox="0 0 353 176" fill="none" style={{ transform: [{ translateX: -20 }] }}>
+    <Path
+      d="M0 20C0 8.95428 8.95431 0 20 0H333C344.046 0 353 8.95431 353 20V124.966H272.044C254.923 124.966 239.024 133.835 230.028 148.403V148.403C223.877 158.365 214.386 165.817 203.249 169.43L195.568 171.921C182.173 176.267 167.774 176.439 154.279 172.415L142.666 168.952C131.712 165.686 122.593 158.04 117.467 147.823V147.823C110.438 133.812 96.1037 124.966 80.4278 124.966H0V20Z"
+      fill="#E9F8FF"
+    />
+  </Svg>
+);
 
 const ChatRoom = () => {
-  const questions = [
+  const defaultQuestions = [
     "미래산업에 대한 준비는 어떻게 해야 할까요?",
     "이런 기술들이 우리 삶을 개선한다고 했는데, 구체적인 예시를 들 수 있나요?",
     "미래산업에서 일자리를 찾기 위한 준비 방법은 무엇인가요?"
   ];
 
+  const [questions, setQuestions] = useState(defaultQuestions);
+
+  const resetQuestions = () => {
+    setQuestions(defaultQuestions);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>예상 질문</Text>
-          <Text style={styles.headerButton}>초기화</Text>
+          <TouchableOpacity onPress={resetQuestions}>
+            <Text style={styles.headerButton}>초기화</Text>
+          </TouchableOpacity>
         </View>
-
-        {/* Chat content */}
         <View style={styles.chatContent}>
-          {/* Bot icon and name */}
           <View style={styles.botContainer}>
-            <View style={styles.botIcon}>
-              <Text>🤖</Text>
-            </View>
-            <Text style={styles.botName}>스피킷</Text>
-          </View>
-
-          {/* Microphone circle */}
-          <View style={styles.micContainer}>
-            <View style={styles.micCircle}>
-              <Mic size={24} color="#4A7DFF" />
+            <View style={styles.botIconWrapper}>
+              <BotIcon color="#4A7DFF" size={10} />
+              <Text style={styles.botName}>스피킷</Text>
             </View>
           </View>
-
-          {/* Questions */}
-          <View style={styles.questionsContainer}>
-            {questions.map((question, index) => (
-              <View key={index} style={styles.questionBubble}>
-                <Text style={styles.questionText}>{question}</Text>
+          <View style={styles.chatBubble}>
+            <View style={styles.backgroundContainer}>
+              <BackgroundSvg />
+            </View>
+            <View style={styles.micContainer}>
+              <View style={styles.micCircle}>
+                <MicIcon size={72}/>
               </View>
-            ))}
+            </View>
+            <View style={styles.questionsContainer}>
+              {questions.map((question, index) => (
+                <View key={index} style={styles.questionBubble}>
+                  <Text style={styles.questionText}>{question}</Text>
+                </View>
+              ))}
+            </View>
           </View>
         </View>
       </View>
@@ -63,75 +82,109 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
   },
   headerTitle: {
-    fontSize: 18,
+    flex: 1, 
+    color: '#000',
+    textAlign: 'center',
+    fontFamily: 'Pretendard',
+    fontSize: 16,
+    fontStyle: 'normal',
     fontWeight: '600',
+    lineHeight: 21, 
+    marginLeft: 30,
+    letterSpacing: -0.32,
   },
   headerButton: {
-    color: '#4A7DFF',
-  },
+    color: '#6A8EF0', 
+    textAlign: 'center',
+    fontFamily: 'Pretendard',
+    fontSize: 16,
+    fontStyle: 'normal',
+    fontWeight: '600',
+    lineHeight: 21,
+    letterSpacing: -0.32,
+},
   chatContent: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 19,
+    backgroundColor: '#CCE9F6',
   },
   botContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  botIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  botName: {
-    fontSize: 16,
-  },
-  micContainer: {
-    alignItems: 'center',
-    marginVertical: 40,
-  },
-  micCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: -15,
+    width: 85,
+    height: 45,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 5,
+    justifyContent: 'center',
+  },
+  botIconWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginLeft: 4, 
+    marginTop: -15,
+  },
+  botName: {
+    fontSize: 14,
+    color: '#000000',
+    marginLeft: 8, 
+  },
+  chatBubble: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 16,
+    marginHorizontal: 0, 
+  },
+  backgroundContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  micContainer: {
+    alignItems: 'center',
+    marginVertical: 32,
+  },
+  micCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 76,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
     elevation: 3,
   },
   questionsContainer: {
+    marginTop: 40,
     gap: 12,
   },
   questionBubble: {
-    backgroundColor: 'white',
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
   },
   questionText: {
     fontSize: 15,
-    color: '#333',
+    color: '#333333',
     textAlign: 'center',
+    lineHeight: 22,
   },
 });
 

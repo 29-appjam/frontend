@@ -1,16 +1,18 @@
+// App.tsx
 import React from 'react';
 import { SafeAreaView } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { RootStackParamList, TabParamList } from './src/types/navigation';
 import FirstView from './src/screens/onboarding/FirstView';
 import ChatRoom from './src/screens/chat/ChatRoom';
-import { HomeIcon, MessageIcon, HeartIcon } from '@/components/icons';
+import { HomeIcon, MessageIcon, HeartIcon } from './assets/icons';
 
-const Stack = createNativeStackNavigator();
-const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<TabParamList>();
 
-const TabNavigator = () => {
+const TabNavigator: React.FC = () => {
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <Tab.Navigator
@@ -53,10 +55,10 @@ const TabNavigator = () => {
   );
 };
 
-const HomeScreen = () => null;
-const AnxietyScreen = () => null;
+const HomeScreen: React.FC = () => null;
+const AnxietyScreen: React.FC = () => null;
 
-export default function App() {
+const App: React.FC = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator
@@ -73,4 +75,6 @@ export default function App() {
       </Stack.Navigator>
     </NavigationContainer>
   );
-}
+};
+
+export default App;

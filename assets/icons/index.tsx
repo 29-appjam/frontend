@@ -60,3 +60,12 @@ export const HeartIcon: React.FC<IconProps> = ({ color = "#A7A7A7", size = 20 })
     />
   </Svg>
 );
+
+export const BotIcon: React.FC<IconProps> = ({ color = "#000", size = 32 }) => (
+    <Svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      <Path
+        d="M16 0C7.16344 0 0 7.16344 0 16C0 24.8366 7.16344 32 16 32C24.8366 32 32 24.8366 32 16C32 7.16344 24.8366 0 16 0ZM16 29.0909C8.91833 29.0909 2.90909 23.0817 2.90909 16C2.90909 8.91833 8.91833 2.90909 16 2.90909C23.0817 2.90909 29.0909 8.91833 29.0909 16C29.0909 23.0817 23.0817 29.0909 16 29.0909Z"
+        fill={color}
+      />
+    </Svg>
+  );
