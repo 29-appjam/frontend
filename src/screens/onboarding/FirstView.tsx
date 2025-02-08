@@ -57,6 +57,12 @@ const FirstView = () => {
     }
   };
 
+  const handleLogin = () => {
+    // 로그인 처리 후
+    navigation.navigate('MainTabs');  // chat 스크린으로 이동
+    hideModal();  // 모달 닫기
+  };
+
   const renderBirthdayInput = () => {
     return (
       <View style={{ marginTop: 40 }}>
@@ -130,7 +136,7 @@ const FirstView = () => {
           </View>
 
           <View style={styles.modalFooter}>
-            <Button title="로그인" variant="primary" onPress={() => {}} />
+            <Button title="로그인" variant="primary" onPress={handleLogin} />
           </View>
         </View>
       );
@@ -211,7 +217,7 @@ const FirstView = () => {
                 if (!isBirthdayInput) {
                   setIsBirthdayInput(true);
                 } else {
-                  // 완료 버튼 로직 추가
+                  // 회원가입 완료 버튼 로직 추가
                 }
               }}
             />
@@ -357,8 +363,8 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     display: 'flex',
-    flexDirection: 'row', 
-    alignItems: 'center', 
+    flexDirection: 'row',
+    alignItems: 'center',
     height: 48,
     paddingHorizontal: 12,
     justifyContent: 'space-between',
