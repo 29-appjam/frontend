@@ -1,53 +1,56 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Image } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
-import { NavigationProps } from '@/navigation/types';
 import Button from '@/components/common/Button';
+import Input from '@/components/common/Input';
+
+const { width } = Dimensions.get('window');
 
 const LoginScreen = () => {
-  const navigation = useNavigation<NavigationProps>();
-
   return (
     <LinearGradient
       colors={['#6A8EF0', '#FFFFFF']}
-      style={styles.gradient}
+      style={styles.container}
       start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      locations={[0, 0.7]}
+      end={{ x: 0, y: 0.5 }}
     >
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
+        <View style={styles.contentContainer}>
           <View style={styles.headerContainer}>
-            <Text style={styles.subtitle}>발표를 압도적으로 편안하게</Text>
-            <Text style={styles.title}>스피킷</Text>
+            <Text style={styles.title}>회원가입</Text>
+            <Text style={styles.subtitle}>스피킷</Text>
           </View>
-          <View style={styles.contentContainer}>
-            <View style={styles.imageContainer}>
-              <Image
-                source={require('@/assets/images/megaphone.png')}
-                style={styles.backgroundImage}
-                resizeMode="contain"
-              />
-              <Image
-                source={require('@/assets/images/28788633_02june22_megaphone_icon_02 2.png')}
-                style={styles.overlayImage}
-                resizeMode="contain"
+
+          <View style={styles.formContainer}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>아이디</Text>
+              <Input 
+                placeholder="아이디를 입력해주세요"
+                leftIcon="user"
               />
             </View>
-            <View style={styles.buttonContainer}>
-              <Button
-                title="로그인"
-                variant="primary"
-                onPress={() => navigation.navigate('Login')}
-              />
-              <View style={styles.buttonSpacer} />
-              <Button
-                title="회원가입"
-                variant="secondary"
-                onPress={() => navigation.navigate('Register')}
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>비밀번호</Text>
+              <Input 
+                placeholder="비밀번호를 입력해주세요"
+                leftIcon="lock"
+                secureTextEntry
+                rightIcon="eye"
               />
             </View>
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={styles.agreement}>
+              계정을 생성함으로써,{'\n'}
+              이용약관과 개인정보처리방침에 동의하였습니다.
+            </Text>
+            <Button
+              title="다음으로"
+              variant="primary"
+              style={styles.button}
+            />
           </View>
         </View>
       </SafeAreaView>
@@ -56,74 +59,66 @@ const LoginScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  gradient: {
+  container: {
     flex: 1,
   },
   safeArea: {
     flex: 1,
   },
-  container: {
+  contentContainer: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+    marginTop: '30%',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingTop: 40,
     paddingHorizontal: 24,
   },
   headerContainer: {
-    position: 'absolute',
-    top: 60,
-    left: 24,
-    zIndex: 1,
-  },
-  contentContainer: {
-    flex: 1,
-    marginTop: 180,
-    justifyContent: 'space-between',
-  },
-  subtitle: {
-    color: '#FFFFFF',
-    fontFamily: 'Pretendard',
-    fontSize: 16,
-    fontWeight: '600',
-    lineHeight: 21,
-    letterSpacing: -0.32,
-    paddingLeft: 10,
+    marginBottom: 40,
   },
   title: {
-    color: '#FFFFFF',
-    fontFamily: 'Pretendard',
     fontSize: 34,
     fontWeight: '700',
-    letterSpacing: -0.32,
+    color: '#6A8EF0',
+    fontFamily: 'Pretendard',
+  },
+  subtitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6A8EF0',
     marginTop: 8,
-    paddingLeft: 10,
+    fontFamily: 'Pretendard',
   },
-  imageContainer: {
-    flex: 1,
-    alignItems: 'flex-start',
-    marginTop: 40,
-    position: 'relative',
-    width: '100%',
+  formContainer: {
+    marginTop: 20,
   },
-  overlayImage: {
-    width: '90%',
-    height: '90%',
+  inputGroup: {
+    marginBottom: 24,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: 8,
+    fontFamily: 'Pretendard',
+  },
+  footer: {
     position: 'absolute',
-    zIndex: 1,
-    top: '-30%',
-    left: -50, 
+    bottom: 48,
+    width: width - 48,
+    alignSelf: 'center',
   },
-  backgroundImage: {
+  agreement: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: '#666666',
+    marginBottom: 16,
+    lineHeight: 18,
+    fontFamily: 'Pretendard',
+  },
+  button: {
     width: '100%',
-    height: '100%',
-    opacity: 1,
-    position: 'absolute',
-    zIndex: 2,
-    left: 0, 
-  },
-  buttonContainer: {
-    width: '100%',
-    marginBottom: 48,
-  },
-  buttonSpacer: {
-    height: 16,
   },
 });
 
