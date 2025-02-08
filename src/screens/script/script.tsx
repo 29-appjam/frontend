@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   Platform,
   KeyboardAvoidingView,
-  Keyboard,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProps } from '@/navigation/types';
@@ -21,29 +21,28 @@ interface ChatMessage {
   isUser: boolean;
 }
 
+interface ScriptHistory {
+  script: string;
+  request: string;
+}
+
+const API_URL = 'https://port-0-soup-server-9zxht12blq9gr7pi.sel4.cloudtype.app';
+
 const ScriptScreen = () => {
   const navigation = useNavigation<NavigationProps>();
   const [message, setMessage] = useState<string>('');
-  const scrollViewRef = useRef<ScrollView>(null);
-  const inputRef = useRef<TextInput>(null);
-  
-  const messages: ChatMessage[] = [
+  const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 1,
       text: '안녕하세요! 스피킷입니다.\n사용자님의 대본을 요구사항에 맞춰서 수정해드릴게요',
       isUser: false,
-    },
-    {
-      id: 2,
-      text: '미레신언은 인공지능, 로봇, 지속 가능한 에너지 등 혁신적 기술로 변화하고 있습니다. 이러한 기술들은 새로운 일자리 창출과 효율적인 자원 관리를 가능하게 하여, 우리 삶의 질을 향상시킬 것입니다.',
-      isUser: true,
-    },
-    {
-      id: 3,
-      text: '대본이 입력 되었습니다!',
-      isUser: false,
-    },
-  ];
+    }
+  ]);
+  const [isLoading, setIsLoading] = useState(false);
+  const scriptHistoryRef = useRef<ScriptHistory>({ script: '', request: '' });
+  const scrollViewRef = useRef<ScrollView>(null);
+  const inputRef = useRef<TextInput>(null);
+  const messageIdCounter = useRef(2);
 
   const actionButtons: string[] = [
     '유치원생들을 예상 청중으로 해석',
@@ -54,6 +53,94 @@ const ScriptScreen = () => {
   const handleActionButtonPress = (text: string) => {
     setMessage(text);
     inputRef.current?.focus();
+  };
+
+  const handleReset = () => {
+    setMessages([
+      {
+        id: 1,
+        text: '안녕하세요! 스피킷입니다.\n사용자님의 대본을 요구사항에 맞춰서 수정해드릴게요',
+        isUser: false,
+      }
+    ]);
+    messageIdCounter.current = 2;
+    scriptHistoryRef.current = { script: '', request: '' };
+  };
+
+  const updateScriptHistory = (messageText: string) => {
+    // 대본이 처음 입력되는 경우
+    if (!scriptHistoryRef.current.script && messageText.length > 20) {
+      scriptHistoryRef.current.script = messageText;
+    }
+    // 요청사항이 입력되는 경우
+    else if (scriptHistoryRef.current.script && actionButtons.includes(messageText)) {
+      scriptHistoryRef.current.request = messageText;
+    }
+  };
+
+  const constructServerMessage = () => {
+    const { script, request } = scriptHistoryRef.current;
+    if (!script) return '';
+    
+    return `대본: ${script}${request ? `, 요청: ${request}` : ''}`;
+  };
+
+  const sendMessage = async (messageText: string) => {
+    if (!messageText.trim() || isLoading) return;
+
+    setIsLoading(true);
+    const currentMessageId = messageIdCounter.current;
+    messageIdCounter.current += 1;
+
+    // Add user message to the chat
+    const userMessage: ChatMessage = {
+      id: currentMessageId,
+      text: messageText,
+      isUser: true,
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setMessage(''); // Clear input
+
+    // Update script history before sending to server
+    updateScriptHistory(messageText);
+
+    try {
+      const serverMessage = constructServerMessage();
+      if (!serverMessage) {
+        throw new Error('대본이 아직 입력되지 않았습니다.');
+      }
+
+      const response = await fetch(`${API_URL}/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: serverMessage,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.text();
+        const botMessage: ChatMessage = {
+          id: messageIdCounter.current,
+          text: data,
+          isUser: false,
+        };
+        messageIdCounter.current += 1;
+        setMessages(prev => [...prev, botMessage]);
+      } else {
+        Alert.alert('오류', '메시지 전송에 실패했습니다.');
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        Alert.alert('오류', error.message);
+      } else {
+        Alert.alert('오류', '서버와의 통신 중 문제가 발생했습니다.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const renderMessage = (msg: ChatMessage) => (
@@ -91,7 +178,7 @@ const ScriptScreen = () => {
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>스피킷</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={handleReset}>
             <Text style={styles.headerRight}>초기화</Text>
           </TouchableOpacity>
         </View>
@@ -125,9 +212,14 @@ const ScriptScreen = () => {
             placeholder="스피킷에게 메세지 보내기"
             placeholderTextColor="#8E8E8E"
             multiline
+            editable={!isLoading}
           />
-          <TouchableOpacity style={styles.sendButton}>
-            <Send size={24} color="#6A8EF0" />
+          <TouchableOpacity 
+            style={styles.sendButton}
+            onPress={() => sendMessage(message)}
+            disabled={isLoading}
+          >
+            <Send size={24} color={isLoading ? '#CCCCCC' : '#6A8EF0'} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -249,4 +341,4 @@ const styles = StyleSheet.create({
   }
 });
 
-export default ScriptScreen
+export default ScriptScreen;

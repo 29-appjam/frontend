@@ -1,65 +1,122 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   SafeAreaView,
   TouchableOpacity,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+  TouchableWithoutFeedback,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import axios from 'axios';
 
 interface Message {
   id: number;
   text: string;
-  isUser: boolean;
 }
 
 const RelieveScreen = () => {
-  const messages: Message[] = [
-    {
-      id: 1,
-      text: '목도 바쁘 마르고, 목소리까지 떨릴 것 같아. 숨도 좀 가빠지고, 머릿속이 하얘지는 것이야.',
-      isUser: false,
-    },
-    {
-      id: 2,
-      text: '괜찮아, 긴장하면 원래 그래. 특히 마르는 건 좋이 될 텐데서 그런 거고, 목소리가 떨리는 것도 성대가 긴장해서 그래. 숨이 가빠지는 건 천천히 숨 쉬면 나아질 거야. 머릿속이 하얘지는 것도 차근스러운 반응이니까, 천개 숨 쉬고 조금만 여유를 가져봐.',
-      isUser: true,
-    },
-  ];
+  const [userInput, setUserInput] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleInputChange = (text: string) => {
+    if (text.length <= 100) {
+      setUserInput(text);
+    }
+  };
+
+  const handleDiagnosis = async () => {
+    if (userInput.trim().length === 0) {
+      Alert.alert('알림', '텍스트를 입력해주세요.');
+      return;
+    }
+
+    setIsLoading(true);
+    Keyboard.dismiss();
+
+    try {
+      const response = await axios.post(
+        'https://port-0-soup-server-9zxht12blq9gr7pi.sel4.cloudtype.app/chat',
+        {
+          message: userInput,
+        }
+      );
+
+      const botMessage: Message = {
+        id: Date.now(),
+        text: response.data,
+      };
+      
+      setMessages([...messages, botMessage]);
+      setUserInput('');
+    } catch (error) {
+      Alert.alert('오류', '서버 통신 중 오류가 발생했습니다.');
+      console.error('Error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>긴장감 완화</Text>
-        <Text style={styles.wordCount}>52/100자</Text>
-      </View>
-
-      {/* Messages */}
-      <View style={styles.messageContainer}>
-        {messages.map((msg) => (
-          <View
-            key={msg.id}
-            style={[
-              styles.messageBubble,
-              msg.isUser ? styles.userBubble : styles.botBubble,
-            ]}
-          >
-            <Text style={[
-              styles.messageText,
-              msg.isUser ? styles.userMessageText : styles.botMessageText,
-            ]}>
-              {msg.text}
-            </Text>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
+        <SafeAreaView style={styles.container}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>긴장감 완화</Text>
+            <Text style={styles.wordCount}>{userInput.length}/100자</Text>
           </View>
-        ))}
-      </View>
 
-      {/* Bottom Button */}
-      <TouchableOpacity style={styles.diagnosisButton}>
-        <Text style={styles.diagnosisButtonText}>진단 받기</Text>
-      </TouchableOpacity>
-    </SafeAreaView>
+          {/* Input Area */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              value={userInput}
+              onChangeText={handleInputChange}
+              placeholder="메시지를 입력하세요"
+              multiline
+              maxLength={100}
+            />
+          </View>
+
+          {/* Messages */}
+          <View style={styles.messageContainer}>
+            {messages.map((msg) => (
+              <View
+                key={msg.id}
+                style={styles.messageBubble}
+              >
+                <Text style={styles.messageText}>
+                  {msg.text}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Bottom Button */}
+          <TouchableOpacity 
+            style={[styles.diagnosisButton, isLoading && styles.disabledButton]}
+            onPress={handleDiagnosis}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.diagnosisButtonText}>진단 받기</Text>
+            )}
+          </TouchableOpacity>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
   );
 };
 
@@ -83,6 +140,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#8E8E8E',
   },
+  inputContainer: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEEEE',
+  },
+  input: {
+    height: 100,
+    borderWidth: 1,
+    borderColor: '#DDDDDD',
+    borderRadius: 12,
+    padding: 12,
+    textAlignVertical: 'top',
+  },
   messageContainer: {
     flex: 1,
     paddingHorizontal: 16,
@@ -92,23 +162,12 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 20,
     marginBottom: 12,
-  },
-  userBubble: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#6B89F5',
-  },
-  botBubble: {
     alignSelf: 'flex-start',
     backgroundColor: '#F8F8F8',
   },
   messageText: {
     fontSize: 16,
     lineHeight: 22,
-  },
-  userMessageText: {
-    color: 'white',
-  },
-  botMessageText: {
     color: 'black',
   },
   diagnosisButton: {
@@ -117,6 +176,9 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
+  },
+  disabledButton: {
+    opacity: 0.7,
   },
   diagnosisButtonText: {
     color: 'white',
