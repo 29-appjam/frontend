@@ -205,7 +205,7 @@ const FirstView = () => {
 
           <View style={styles.modalFooter}>
             <Button
-              title={!isBirthdayInput ? '다음으로' : '완료'}
+              title={!isBirthdayInput ? '다음으로' : '회원가입'}
               variant="primary"
               onPress={() => {
                 if (!isBirthdayInput) {
