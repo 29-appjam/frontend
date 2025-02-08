@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Dimensions, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, Dimensions, TouchableOpacity, Alert, Animated } from 'react-native';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
-import { Bot } from 'lucide-react-native';
+import { Bot, Play, Pause, X } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
 import MicIcon from 'assets/icons/MicIcon';
 
@@ -17,6 +17,154 @@ const BackgroundSvg = () => (
   </Svg>
 );
 
+const RippleEffect = ({ isRecording }) => {
+  const rippleScale1 = useRef(new Animated.Value(1)).current;
+  const rippleOpacity1 = useRef(new Animated.Value(1)).current;
+  const rippleScale2 = useRef(new Animated.Value(1)).current;
+  const rippleOpacity2 = useRef(new Animated.Value(1)).current;
+
+  const startAnimation = () => {
+    const anim1 = Animated.parallel([
+      Animated.timing(rippleScale1, {
+        toValue: 2,
+        duration: 2000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(rippleOpacity1, {
+        toValue: 0,
+        duration: 2000,
+        useNativeDriver: true,
+      }),
+    ]);
+
+    const anim2 = Animated.parallel([
+      Animated.timing(rippleScale2, {
+        toValue: 2,
+        duration: 2000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(rippleOpacity2, {
+        toValue: 0,
+        duration: 2000,
+        useNativeDriver: true,
+      }),
+    ]);
+
+    const sequence = Animated.stagger(1000, [anim1, anim2]);
+
+    sequence.start(() => {
+      rippleScale1.setValue(1);
+      rippleOpacity1.setValue(1);
+      rippleScale2.setValue(1);
+      rippleOpacity2.setValue(1);
+      startAnimation();
+    });
+  };
+
+  useEffect(() => {
+    startAnimation();
+    return () => {
+      rippleScale1.setValue(1);
+      rippleOpacity1.setValue(1);
+      rippleScale2.setValue(1);
+      rippleOpacity2.setValue(1);
+    };
+  }, []);
+
+  return (
+    <View style={[styles.rippleContainer, { opacity: isRecording ? 1 : 0.3 }]}>
+      <Animated.View
+        style={[
+          styles.ripple,
+          {
+            transform: [{ scale: rippleScale1 }],
+            opacity: rippleOpacity1,
+          },
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.ripple,
+          {
+            transform: [{ scale: rippleScale2 }],
+            opacity: rippleOpacity2,
+          },
+        ]}
+      />
+    </View>
+  );
+};
+
+const AudioMessage = ({ audioUri, onDelete, index }) => {
+  const [sound, setSound] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  useEffect(() => {
+    loadSound();
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
+  }, [audioUri]);
+
+  const loadSound = async () => {
+    try {
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: audioUri },
+        { shouldPlay: false }
+      );
+      
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.didJustFinish) {
+          setIsPlaying(false);
+        }
+      });
+      
+      setSound(newSound);
+    } catch (error) {
+      console.error('Error loading sound:', error);
+      Alert.alert('오류', '음성을 로드할 수 없습니다.');
+    }
+  };
+
+  async function playSound() {
+    try {
+      if (sound) {
+        if (isPlaying) {
+          await sound.pauseAsync();
+          setIsPlaying(false);
+        } else {
+          await sound.setPositionAsync(0);
+          await sound.playAsync();
+          setIsPlaying(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error playing sound:', error);
+      Alert.alert('오류', '음성을 재생할 수 없습니다.');
+    }
+  }
+
+  return (
+    <View style={styles.audioMessageContainer}>
+      <TouchableOpacity onPress={playSound} style={styles.playButton}>
+        {isPlaying ? (
+          <Pause size={24} color="#6A8EF0" />
+        ) : (
+          <Play size={24} color="#6A8EF0" />
+        )}
+      </TouchableOpacity>
+      <View style={styles.audioInfo}>
+        <Text style={styles.audioText}>음성 메시지 {index + 1}</Text>
+      </View>
+      <TouchableOpacity onPress={onDelete} style={styles.deleteButton}>
+        <X size={20} color="#FF4A4A" />
+      </TouchableOpacity>
+    </View>
+  );
+};
+
 const ChatRoom = () => {
   const defaultQuestions = [
     "미래산업에 대한 준비는 어떻게 해야 할까요?",
@@ -27,25 +175,23 @@ const ChatRoom = () => {
   const [questions, setQuestions] = useState(defaultQuestions);
   const [isRecording, setIsRecording] = useState(false);
   const [recording, setRecording] = useState(null);
+  const [audioMessages, setAudioMessages] = useState([]);
 
   useEffect(() => {
     return () => {
       if (recording) {
-        recording.stopAndUnloadAsync();
+        stopRecording();
       }
     };
   }, []);
 
   const startRecording = async () => {
     try {
-      console.log('Requesting permissions..');
-      const { granted } = await Audio.requestPermissionsAsync();
-      
-      if (!granted) {
-        Alert.alert('권한 오류', '마이크 권한이 필요합니다.');
-        return;
+      if (recording) {
+        await recording.stopAndUnloadAsync();
       }
 
+      await Audio.requestPermissionsAsync();
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
@@ -53,111 +199,66 @@ const ChatRoom = () => {
         staysActiveInBackground: true,
       });
 
-      console.log('Starting recording..');
-      const { recording } = await Audio.Recording.createAsync({
-        android: {
-          extension: '.wav',
-          outputFormat: Audio.RECORDING_OPTION_ANDROID_OUTPUT_FORMAT_DEFAULT,
-          audioEncoder: Audio.RECORDING_OPTION_ANDROID_AUDIO_ENCODER_DEFAULT,
-          sampleRate: 44100,
-          numberOfChannels: 1,
-          bitRate: 128000,
-        },
-        ios: {
-          extension: '.wav',
-          audioQuality: Audio.RECORDING_OPTION_IOS_AUDIO_QUALITY_HIGH,
-          sampleRate: 44100,
-          numberOfChannels: 1,
-          bitRate: 128000,
-          linearPCMBitDepth: 16,
-          linearPCMIsBigEndian: false,
-          linearPCMIsFloat: false,
-        },
-      });
+      const { recording: newRecording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
 
-      setRecording(recording);
+      setRecording(newRecording);
       setIsRecording(true);
-      console.log('Recording started');
     } catch (err) {
       console.error('Failed to start recording', err);
       Alert.alert('녹음 오류', '녹음을 시작할 수 없습니다.');
+      setIsRecording(false);
     }
   };
 
   const stopRecording = async () => {
     try {
       if (!recording) {
+        setIsRecording(false);
         return;
       }
 
-      console.log('Stopping recording..');
       await recording.stopAndUnloadAsync();
+      setIsRecording(false);
+      
       const uri = recording.getURI();
       console.log('Recording stopped and stored at', uri);
-      
+
+      const newAudioMessage = { id: Date.now(), uri };
+      setAudioMessages(prev => [...prev, newAudioMessage]);
+
       setRecording(null);
-      setIsRecording(false);
-
-      // 오디오 파일을 base64로 변환
-      const base64Audio = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      // Google Cloud Speech-to-Text API 호출
-      try {
-        const response = await fetch('YOUR_GOOGLE_CLOUD_FUNCTION_URL', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            audio: {
-              content: base64Audio
-            },
-            config: {
-              encoding: 'LINEAR16',
-              sampleRateHertz: 44100,
-              languageCode: 'ko-KR',
-              model: 'default',
-              audioChannelCount: 1,
-            }
-          }),
-        });
-
-        const result = await response.json();
-        
-        if (result.transcript) {
-          setQuestions(prev => [...prev, result.transcript]);
-        } else {
-          Alert.alert('인식 오류', '음성을 텍스트로 변환하지 못했습니다. 다시 시도해주세요.');
-        }
-      } catch (speechError) {
-        console.error('Speech recognition failed:', speechError);
-        Alert.alert('변환 오류', '음성 인식에 실패했습니다. 다시 시도해주세요.');
-      }
-
-      // 임시 파일 삭제
-      try {
-        await FileSystem.deleteAsync(uri);
-      } catch (deleteError) {
-        console.error('Failed to delete temporary file:', deleteError);
-      }
-
     } catch (err) {
       console.error('Failed to stop recording', err);
-      Alert.alert('오류', '음성 처리 중 오류가 발생했습니다.');
+      Alert.alert('오류', '녹음 중지 중 오류가 발생했습니다.');
+      setIsRecording(false);
+      setRecording(null);
     }
+  };
+
+  const deleteAudioMessage = async (id) => {
+    try {
+      const message = audioMessages.find(msg => msg.id === id);
+      if (message) {
+        await FileSystem.deleteAsync(message.uri);
+      }
+    } catch (e) {
+      console.log('파일 삭제 중 오류:', e);
+    }
+    setAudioMessages(prev => prev.filter(msg => msg.id !== id));
   };
 
   const resetQuestions = () => {
     setQuestions(defaultQuestions);
+    setAudioMessages([]);
   };
 
-  const handleMicPress = () => {
+  const handleMicPress = async () => {
     if (isRecording) {
-      stopRecording();
+      await stopRecording();
     } else {
-      startRecording();
+      await startRecording();
     }
   };
 
@@ -181,15 +282,26 @@ const ChatRoom = () => {
             <View style={styles.backgroundContainer}>
               <BackgroundSvg />
             </View>
-            <TouchableOpacity 
-              style={[styles.micContainer, isRecording && styles.micContainerRecording]}
-              onPress={handleMicPress}
-            >
-              <View style={[styles.micCircle, isRecording && styles.micCircleRecording]}>
-                <MicIcon size={72} color={isRecording ? "#FF4A4A" : "#000000"}/>
-              </View>
-            </TouchableOpacity>
-            <View style={styles.questionsContainer}>
+            <View style={styles.micWrapper}>
+              <RippleEffect isRecording={isRecording} />
+              <TouchableOpacity 
+                style={[styles.micContainer, isRecording && styles.micContainerRecording]}
+                onPress={handleMicPress}
+              >
+                <View style={[styles.micCircle, isRecording && styles.micCircleRecording]}>
+                  <MicIcon size={72} color={isRecording ? "#FF4A4A" : "#000000"}/>
+                </View>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.messagesContainer}>
+              {audioMessages.map((message, index) => (
+                <AudioMessage
+                  key={message.id}
+                  audioUri={message.uri}
+                  onDelete={() => deleteAudioMessage(message.id)}
+                  index={index}
+                />
+              ))}
               {questions.map((question, index) => (
                 <View key={index} style={styles.questionBubble}>
                   <Text style={styles.questionText}>{question}</Text>
@@ -282,7 +394,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 20,
     marginBottom: 16,
-    marginHorizontal: 0, 
+    marginHorizontal: 0,
   },
   backgroundContainer: {
     position: 'absolute',
@@ -290,9 +402,30 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
+  micWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 160,
+    marginTop: 0,
+    marginBottom: 20,
+  },
+  rippleContainer: {
+    position: 'absolute',
+    width: 160,
+    height: 160,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ripple: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#FFE5E5',
+  },
   micContainer: {
     alignItems: 'center',
-    marginVertical: 32,
+    zIndex: 1,
   },
   micContainerRecording: {
     opacity: 0.8,
@@ -317,7 +450,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFE5E5',
   },
   questionsContainer: {
-    marginTop: 40,
+    flex: 1,
     gap: 12,
   },
   questionBubble: {

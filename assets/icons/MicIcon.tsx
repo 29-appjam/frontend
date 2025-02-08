@@ -2,8 +2,8 @@ import React from 'react';
 import Svg, { G, Circle, Path, Defs, Filter, FeFlood, FeColorMatrix, FeOffset, FeGaussianBlur, FeComposite, FeBlend } from 'react-native-svg';
 
 interface MicIconProps {
-  size?: number; // 아이콘 크기
-  color?: string; // 기본 색상
+  size?: number; 
+  color?: string; 
 }
 
 const MicIcon: React.FC<MicIconProps> = ({ size = 132, color = '#6A8EF0' }) => {

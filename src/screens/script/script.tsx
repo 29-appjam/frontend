@@ -230,7 +230,7 @@ const ScriptScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F2',
+    backgroundColor: 'white',
   },
   keyboardAvoidingView: {
     flex: 1,
