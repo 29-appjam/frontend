@@ -1,16 +1,16 @@
 import React, { useRef, useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  SafeAreaView, 
-  Image, 
-  Animated, 
-  Dimensions, 
-  TextInput, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  Image,
+  Animated,
+  Dimensions,
+  TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  Pressable
+  Pressable,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -22,14 +22,18 @@ import LockIcon from '@/components/icons/LockIcon';
 
 const { height } = Dimensions.get('window');
 
+type ModalType = 'login' | 'register' | null;
+
 const FirstView = () => {
   const navigation = useNavigation<NavigationProps>();
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [modalType, setModalType] = useState<ModalType>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isBirthdayInput, setIsBirthdayInput] = useState(false);
   const slideAnim = useRef(new Animated.Value(height)).current;
 
-  const showModal = () => {
-    setIsModalVisible(true);
+  const showModal = (type: ModalType) => {
+    setModalType(type);
     Animated.timing(slideAnim, {
       toValue: 0,
       duration: 300,
@@ -42,15 +46,193 @@ const FirstView = () => {
       toValue: height,
       duration: 300,
       useNativeDriver: true,
-    }).start(() => setIsModalVisible(false));
+    }).start(() => setModalType(null));
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+  const togglePasswordVisibility = (field: 'password' | 'confirmPassword') => {
+    if (field === 'password') {
+      setShowPassword(!showPassword);
+    } else {
+      setShowConfirmPassword(!showConfirmPassword);
+    }
+  };
+
+  const renderBirthdayInput = () => {
+    return (
+      <View style={{ marginTop: 40 }}>
+        <Text style={styles.inputLabel}>생년월일</Text>
+        <View style={styles.birthdayContainer}>
+          <View style={styles.birthdayInput}>
+            <TextInput
+              style={styles.birthdayText}
+              placeholder="YYYY"
+              placeholderTextColor="#A7A7A7"
+              keyboardType="numeric"
+              maxLength={4}
+            />
+            <Ionicons name="chevron-down" size={16} color="#A7A7A7" />
+          </View>
+          <View style={styles.birthdayInput}>
+            <TextInput
+              style={styles.birthdayText}
+              placeholder="MM"
+              placeholderTextColor="#A7A7A7"
+              keyboardType="numeric"
+              maxLength={2}
+            />
+            <Ionicons name="chevron-down" size={16} color="#A7A7A7" />
+          </View>
+          <View style={styles.birthdayInput}>
+            <TextInput
+              style={styles.birthdayText}
+              placeholder="DD"
+              placeholderTextColor="#A7A7A7"
+              keyboardType="numeric"
+              maxLength={2}
+            />
+            <Ionicons name="chevron-down" size={16} color="#A7A7A7" />
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const renderModalContent = () => {
+    if (modalType === 'login') {
+      return (
+        <View style={styles.modalContent}>
+          <View style={styles.modalInputContainer}>
+            <View style={[styles.inputContainer, { marginTop: 40 }]}>
+              <Text style={styles.inputLabel}>아이디</Text>
+              <View style={styles.inputWrapper}>
+                <UserIcon size={20} color="#A7A7A7" />
+                <TextInput
+                  style={styles.input}
+                  placeholder="아이디를 입력해주세요"
+                  placeholderTextColor="#999"
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>비밀번호</Text>
+              <View style={styles.inputWrapper}>
+                <LockIcon size={20} color="#A7A7A7" />
+                <TextInput
+                  style={styles.input}
+                  placeholder="비밀번호를 입력해주세요"
+                  placeholderTextColor="#999"
+                  secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={() => togglePasswordVisibility('password')}
+                >
+                  <Ionicons
+                    name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                    size={20}
+                    color="#999"
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.modalFooter}>
+            <Button title="로그인" variant="primary" onPress={() => {}} />
+          </View>
+        </View>
+      );
+    } else if (modalType === 'register') {
+      return (
+        <View style={styles.modalContent}>
+          <View style={styles.modalInputContainer}>
+            {!isBirthdayInput ? (
+              <>
+                <View style={[styles.inputContainer, { marginTop: 40 }]}>
+                  <Text style={styles.inputLabel}>아이디</Text>
+                  <View style={styles.inputWrapper}>
+                    <UserIcon size={20} color="#A7A7A7" />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="아이디를 입력해주세요"
+                      placeholderTextColor="#999"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>비밀번호</Text>
+                  <View style={styles.inputWrapper}>
+                    <LockIcon size={20} color="#A7A7A7" />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="비밀번호를 입력해주세요"
+                      placeholderTextColor="#999"
+                      secureTextEntry={!showPassword}
+                    />
+                    <TouchableOpacity
+                      style={styles.eyeIcon}
+                      onPress={() => togglePasswordVisibility('password')}
+                    >
+                      <Ionicons
+                        name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                        size={20}
+                        color="#999"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>비밀번호 확인</Text>
+                  <View style={styles.inputWrapper}>
+                    <LockIcon size={20} color="#A7A7A7" />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="비밀번호를 다시 입력해주세요"
+                      placeholderTextColor="#999"
+                      secureTextEntry={!showConfirmPassword}
+                    />
+                    <TouchableOpacity
+                      style={styles.eyeIcon}
+                      onPress={() => togglePasswordVisibility('confirmPassword')}
+                    >
+                      <Ionicons
+                        name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
+                        size={20}
+                        color="#999"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </>
+            ) : (
+              renderBirthdayInput()
+            )}
+          </View>
+
+          <View style={styles.modalFooter}>
+            <Button
+              title={!isBirthdayInput ? '다음으로' : '완료'}
+              variant="primary"
+              onPress={() => {
+                if (!isBirthdayInput) {
+                  setIsBirthdayInput(true);
+                } else {
+                  // 완료 버튼 로직 추가
+                }
+              }}
+            />
+          </View>
+        </View>
+      );
+    }
+    return null;
   };
 
   return (
-    <Pressable style={styles.pressable} onPress={isModalVisible ? hideModal : undefined}>
+    <Pressable style={styles.pressable} onPress={modalType ? hideModal : undefined}>
       <LinearGradient
         colors={['#6A8EF0', '#FFFFFF']}
         style={styles.gradient}
@@ -61,17 +243,8 @@ const FirstView = () => {
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.container}>
             <View style={styles.headerContainer}>
-              {isModalVisible ? (
-                <>
-                  <Text style={styles.subtitle}>로그인</Text>
-                  <Text style={styles.title}>스피킷</Text>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.subtitle}>발표를 압도적으로 편안하게</Text>
-                  <Text style={styles.title}>스피킷</Text>
-                </>
-              )}
+              <Text style={styles.subtitle}>발표를 압도적으로 편안하게</Text>
+              <Text style={styles.title}>스피킷</Text>
             </View>
             <View style={styles.contentContainer}>
               <View style={styles.imageWrapper}>
@@ -82,77 +255,26 @@ const FirstView = () => {
                 />
               </View>
               <View style={styles.buttonContainer}>
-                <Button
-                  title="로그인"
-                  variant="primary"
-                  onPress={showModal}
-                />
+                <Button title="로그인" variant="primary" onPress={() => showModal('login')} />
                 <View style={styles.buttonSpacer} />
                 <Button
                   title="회원가입"
                   variant="secondary"
-                  onPress={() => navigation.navigate('Register')}
+                  onPress={() => showModal('register')}
                 />
               </View>
             </View>
 
-            {isModalVisible && (
-              <Animated.View 
+            {modalType && (
+              <Animated.View
                 style={[
                   styles.modalContainer,
                   {
-                    transform: [{ translateY: slideAnim }]
-                  }
+                    transform: [{ translateY: slideAnim }],
+                  },
                 ]}
               >
-                <TouchableWithoutFeedback>
-                  <View style={styles.modalContent}>
-                    <View style={styles.modalInputContainer}>
-                      <View style={[styles.inputContainer, { marginTop: 40 }]}>
-                        <Text style={styles.inputLabel}>아이디</Text>
-                        <View style={styles.inputWrapper}>
-                          <UserIcon size={20} color="#A7A7A7" />
-                          <TextInput 
-                            style={styles.input}
-                            placeholder="아이디를 입력해주세요"
-                            placeholderTextColor="#999"
-                          />
-                        </View>
-                      </View>
-
-                      <View style={styles.inputContainer}>
-                        <Text style={styles.inputLabel}>비밀번호</Text>
-                        <View style={styles.inputWrapper}>
-                          <LockIcon size={20} color="#A7A7A7" />
-                          <TextInput 
-                            style={styles.input}
-                            placeholder="비밀번호를 입력해주세요"
-                            placeholderTextColor="#999"
-                            secureTextEntry={!showPassword}
-                          />
-                          <TouchableOpacity 
-                            style={styles.eyeIcon}
-                            onPress={togglePasswordVisibility}
-                          >
-                            <Ionicons 
-                              name={showPassword ? "eye-outline" : "eye-off-outline"} 
-                              size={20} 
-                              color="#999" 
-                            />
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    </View>
-
-                    <View style={styles.modalFooter}>
-                      <Button
-                        title="로그인"
-                        variant="primary"
-                        onPress={() => {}}
-                      />
-                    </View>
-                  </View>
-                </TouchableWithoutFeedback>
+                <TouchableWithoutFeedback>{renderModalContent()}</TouchableWithoutFeedback>
               </Animated.View>
             )}
           </View>
@@ -186,18 +308,13 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: '#FFFFFF',
-    fontFamily: 'Pretendard',
     fontSize: 16,
     fontWeight: '600',
-    lineHeight: 21,
-    letterSpacing: -0.32,
   },
   title: {
     color: '#FFFFFF',
-    fontFamily: 'Pretendard',
     fontSize: 34,
     fontWeight: '700',
-    letterSpacing: -0.32,
     marginTop: 8,
   },
   imageWrapper: {
@@ -223,22 +340,17 @@ const styles = StyleSheet.create({
     right: 0,
     width: 393,
     height: 620,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFF',
     borderTopLeftRadius: 42,
     borderTopRightRadius: 42,
-    shadowColor: '#000000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowColor: '#000',
     shadowOpacity: 0.05,
-    shadowRadius: 4,
     elevation: 4,
   },
   modalContent: {
     flex: 1,
     padding: 20,
-    justifyContent: 'space-between',  // Changed to space-between
+    justifyContent: 'space-between',
   },
   modalInputContainer: {
     flex: 1,
@@ -249,28 +361,56 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333',
     marginBottom: 8,
+    color: '#A7A7A7',
   },
   inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F8F8',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    display: 'flex',
+    flexDirection: 'row', 
+    alignItems: 'center', 
     height: 48,
+    paddingHorizontal: 12,
+    justifyContent: 'space-between',
+    alignSelf: 'stretch',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EDEDED',
+    backgroundColor: '#FFF',
   },
   input: {
     flex: 1,
     fontSize: 14,
     color: '#333',
-    marginLeft: 12,
+    marginLeft: 8,
   },
   eyeIcon: {
     padding: 8,
   },
   modalFooter: {
     marginBottom: 34,
+  },
+  birthdayContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
+  birthdayInput: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    justifyContent: 'space-between',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EDEDED',
+    backgroundColor: '#FFF',
+  },
+  birthdayText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+    textAlign: 'left',
   },
 });
 
