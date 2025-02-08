@@ -28,9 +28,8 @@ const { height } = Dimensions.get('window');
 
 type ModalType = 'login' | 'register' | null;
 
-// API 인스턴스 생성
 const api = axios.create({
-  baseURL: 'https://port-0-soup-server-9zxht12blq9gr7pi.sel4.cloudtype.app',
+  baseURL: 'http://172.16.1.110:8080',
 });
 
 const FirstView = () => {

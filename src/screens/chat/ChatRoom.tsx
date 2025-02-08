@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Dimensions, TouchableOpacity, Alert, Animated } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Dimensions, TouchableOpacity, Alert, Animated, Platform } from 'react-native';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
 import { Bot, Play, Pause, X } from 'lucide-react-native';
@@ -156,9 +156,7 @@ const AudioMessage = ({ audioUri, onDelete, index }) => {
           <Play size={24} color="#6A8EF0" />
         )}
       </TouchableOpacity>
-      <View style={styles.audioInfo}>
-        <Text style={styles.audioText}>음성 메시지 {index + 1}</Text>
-      </View>
+
       <TouchableOpacity onPress={onDelete} style={styles.deleteButton}>
         <X size={20} color="#FF4A4A" />
       </TouchableOpacity>
@@ -167,14 +165,9 @@ const AudioMessage = ({ audioUri, onDelete, index }) => {
 };
 
 const ChatRoom = () => {
-  const [questions, setQuestions] = useState([
-    "미래산업에 대한 준비는 어떻게 해야 할까요?",
-    "이런 기술들이 우리 삶을 개선한다고 했는데, 구체적인 예시를 들 수 있나요?",
-    "미래산업에서 일자리를 찾기 위한 준비 방법은 무엇인가요?"
-  ]);
+  const [questions, setQuestions] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
   const [recording, setRecording] = useState(null);
-  const [audioMessages, setAudioMessages] = useState([]);
 
   useEffect(() => {
     return () => {
@@ -186,9 +179,18 @@ const ChatRoom = () => {
 
   const startRecording = async () => {
     try {
+      // 이전 녹음이 있다면 정리
       if (recording) {
-        await recording.stopAndUnloadAsync();
-      }
+        try {
+          const recordingStatus = await recording.getStatusAsync();
+          if (recordingStatus.isRecording) {
+            await recording.stopAndUnloadAsync();
+          }
+        } catch (error) {
+          console.log('Previous recording cleanup error:', error);
+        }
+        setRecording(null);
+      }  
 
       await Audio.requestPermissionsAsync();
       await Audio.setAudioModeAsync({
@@ -198,9 +200,27 @@ const ChatRoom = () => {
         staysActiveInBackground: true,
       });
 
-      const { recording: newRecording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
+      const { recording: newRecording } = await Audio.Recording.createAsync({
+        android: {
+          extension: '.aac',
+          outputFormat: Audio.RECORDING_OPTION_ANDROID_OUTPUT_FORMAT_MPEG_4,
+          audioEncoder: Audio.RECORDING_OPTION_ANDROID_AUDIO_ENCODER_AAC,
+          sampleRate: 48000,
+          numberOfChannels: 1,
+          bitRate: 128000,
+        },
+        ios: {
+          extension: '.m4a',
+          outputFormat: Audio.RECORDING_OPTION_IOS_OUTPUT_FORMAT_MPEG4AAC,
+          audioQuality: Audio.RECORDING_OPTION_IOS_AUDIO_QUALITY_MAX,
+          sampleRate: 48000,
+          numberOfChannels: 1,
+          bitRate: 128000,
+          linearPCMBitDepth: 16,
+          linearPCMIsBigEndian: false,
+          linearPCMIsFloat: false,
+        },
+      });
 
       setRecording(newRecording);
       setIsRecording(true);
@@ -224,47 +244,58 @@ const ChatRoom = () => {
       const uri = recording.getURI();
       console.log('Recording stopped and stored at', uri);
 
-      // 서버로 음성 보내기
-      const formData = new FormData();
-      formData.append('audioFile', {
-        uri: uri,
-        type: 'audio/mpeg', // 파일 형식에 맞게 수정 필요
-        name: 'audio.mp3',
-      });
-
-      const response = await axios.post('http://172.16.1.110:8080/transcribe', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      // 예상 질문 처리
-      if (response.status === 200) {
-        setQuestions(response.data);
-      } else {
-        Alert.alert('오류', '예상 질문을 받을 수 없습니다.');
+      // 파일이 실제로 존재하는지 확인
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      if (!fileInfo.exists) {
+        throw new Error('Recorded file does not exist');
       }
 
-      setAudioMessages(prev => [...prev, { id: Date.now(), uri }]);
+      // FormData 생성 및 파일 첨부
+      const formData = new FormData();
+      const audioFile = {
+        uri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri,
+        type: 'audio/m4a',
+        name: 'recording.m4a'
+      };
+      
+      formData.append('audioFile', audioFile);
+      
+      console.log('전송 시작');
+      const response = await axios.post(
+        'http://172.16.1.110:8080/transcribe', 
+        formData,
+        {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'multipart/form-data',
+          },
+          timeout: 10000,
+        }
+      );
+
+      console.log('서버 응답:', response.data);
+      
+      // 응답 텍스트에서 숫자로 시작하는 줄만 추출
+      const extractedQuestions = response.data
+        .split('\n')
+        .filter(line => /^\d+\./.test(line.trim()))
+        .map(line => line.replace(/^\d+\.\s*/, '').trim());
+
+      if (extractedQuestions.length > 0) {
+        setQuestions(extractedQuestions);
+      } else {
+        console.log('추출된 질문이 없습니다');
+        setQuestions([]);
+      }
+
       setRecording(null);
+
     } catch (err) {
-      console.error('Failed to stop recording', err);
+      console.error('Error details:', err.response?.data || err.message);
       Alert.alert('오류', '녹음 중지 중 오류가 발생했습니다.');
       setIsRecording(false);
       setRecording(null);
     }
-  };
-
-  const deleteAudioMessage = async (id) => {
-    try {
-      const message = audioMessages.find(msg => msg.id === id);
-      if (message) {
-        await FileSystem.deleteAsync(message.uri);
-      }
-    } catch (e) {
-      console.log('파일 삭제 중 오류:', e);
-    }
-    setAudioMessages(prev => prev.filter(msg => msg.id !== id));
   };
 
   const handleMicPress = async () => {
@@ -275,11 +306,24 @@ const ChatRoom = () => {
     }
   };
 
+  // 초기화 함수
+  const handleReset = () => {
+    setQuestions([]);
+    if (recording) {
+      stopRecording();
+    }
+    setIsRecording(false);
+    setRecording(null);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>예상 질문</Text>
+          <TouchableOpacity onPress={handleReset}>
+            <Text style={styles.headerRight}>초기화</Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.chatContent}>
           <View style={styles.botContainer}>
@@ -304,14 +348,6 @@ const ChatRoom = () => {
               </TouchableOpacity>
             </View>
             <View style={styles.messagesContainer}>
-              {audioMessages.map((message, index) => (
-                <AudioMessage
-                  key={message.id}
-                  audioUri={message.uri}
-                  onDelete={() => deleteAudioMessage(message.id)}
-                  index={index}
-                />
-              ))}
               {questions.map((question, index) => (
                 <View key={index} style={styles.questionBubble}>
                   <Text style={styles.questionText}>{question}</Text>
@@ -439,10 +475,14 @@ const styles = StyleSheet.create({
   micCircleRecording: {
     backgroundColor: '#FFE5E5',
   },
+  messagesContainer: {
+    gap: 12,
+  },
   questionBubble: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 16,
+    gap: 12,
     borderWidth: 1,
     borderColor: '#E5E5E5',
   },
@@ -451,6 +491,10 @@ const styles = StyleSheet.create({
     color: '#333333',
     textAlign: 'center',
     lineHeight: 22,
+  },
+  headerRight: {
+    fontSize: 16,
+    color: '#6A8EF0',
   },
 });
 

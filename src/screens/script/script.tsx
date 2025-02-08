@@ -26,7 +26,7 @@ interface ScriptHistory {
   request: string;
 }
 
-const API_URL = 'https://port-0-soup-server-9zxht12blq9gr7pi.sel4.cloudtype.app';
+const API_URL = 'http://172.16.1.110:8080';
 
 const ScriptScreen = () => {
   const navigation = useNavigation<NavigationProps>();

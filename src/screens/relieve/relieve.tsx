@@ -42,7 +42,7 @@ const RelieveScreen = () => {
 
     try {
       const response = await axios.post(
-        'https://port-0-soup-server-9zxht12blq9gr7pi.sel4.cloudtype.app/chat',
+        'http://172.16.1.110:8080/chat',
         {
           message: userInput,
         }
